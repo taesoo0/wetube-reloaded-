@@ -1,4 +1,15 @@
 extends base.pug
 
 block content 
-    h1 Watch Video
+    h3 #{video.views} #{video.views===1?"view":"views"}
+    a(href=`${video.id}/edit`) Edit Video &rarr;
+    
+    
+    
+    
+//- (absolute , relative url? 차이점은 /가 붙으면 localhost /로 가게된다.)
+//- localhost:4000/profile/edit-profile/password
+//- ====> a(href="potato")
+//- localhost:4000 /profile/edit-profile/potato
+//- ====> a(href="/potato")
+//- localgost:4000/potato
