@@ -10,7 +10,6 @@ import Video from "../models/Video";
 
 export const home = async (req, res) => {
   const videos = await Video.find({}).sort({ createdAt: "desc" });
-  console.log(videos);
   return res.render("home", { pageTitle: "Home", videos });
 };
 export const watch = async (req, res) => {
@@ -19,13 +18,13 @@ export const watch = async (req, res) => {
   if (video) {
     return res.render("watch", { pageTitle: video.title, video });
   }
-  return res.render("404", { pageTitle: "Vdieo not found." });
+  return res.status(404).render("404", { pageTitle: "Vdieo not found." });
 };
 export const getEdit = async (req, res) => {
   const { id } = req.params;
   const video = await Video.findById(id);
   if (!video) {
-    return res.render("404", { pageTitle: "Vdieo not found." });
+    return res.status(404).render("404", { pageTitle: "Vdieo not found." });
   }
   return res.render("edit", { pageTitle: `Edit ${video.title}`, video });
 };
