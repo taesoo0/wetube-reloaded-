@@ -2,8 +2,10 @@ import express from "express";
 import morgan from "morgan";
 import rootRouter from "./routers/rootRouter";
 import session from "express-session";
+import MongoStore from "connect-mongo";
 import videoRouter from "./routers/videoRouter";
 import userRouter from "./routers/userRouter";
+import { localsMiddleware } from "./middlewares";
 
 const app = express();
 const logger = morgan("dev");
@@ -19,24 +21,23 @@ app.use(express.urlencoded({ extended: true }));
 // 같은 아이피에서 사용해도, 다른 브라우저를 사용하면 다른 세션아이디를 준다. ?(아이피를 차단하는건 api에서 하는일이 아닌가)
 app.use(
   session({
-    secret: "Hello!",
-    resave: true,
-    saveUninitialized: true,
+    secret: process.env.COOKIE_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: process.env.DB_URL }),
   })
 );
+// 쿠키가 저장되어진 곳을 판별할 수 있는 방법은 domain에 따라 주는 쿠키가 다르기 때문이다.
 
-app.use((req, res, next) => {
-  req.sessionStore.all((error, sessions) => {
-    console.log(sessions);
-    next();
-  });
-});
+//내 주소로 접속한 모든 사람들을 볼 수 있다.
+// app.use((req, res, next) => {
+//   req.sessionStore.all((error, sessions) => {
+//     console.log(sessions);
+//     next();
+//   });
+// });
 
-app.get("/add-one", (req, res, next) => {
-  req.session.potato += 1;
-  return res.send(`${req.session.id}\n${req.session.potato}`);
-});
-
+app.use(localsMiddleware);
 app.use("/", rootRouter);
 app.use("/videos", videoRouter);
 app.use("/users", userRouter);
