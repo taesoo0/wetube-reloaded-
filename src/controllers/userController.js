@@ -1,3 +1,4 @@
+import { json } from "express";
 import User from "../models/User";
 import bcrypt from "bcrypt";
 
@@ -39,7 +40,7 @@ export const getLogin = (req, res) =>
 export const postLogin = async (req, res) => {
   const { username, password } = req.body;
   const pageTitle = "Login";
-  const user = await User.findOne({ username });
+  const user = await User.findOne({ username, socialOnly: false });
   if (!user) {
     return res.status(400).render("login", {
       pageTitle: pageTitle,
@@ -61,7 +62,7 @@ export const postLogin = async (req, res) => {
 export const startGithubLogin = (req, res) => {
   const baseUrl = "https://github.com/login/oauth/authorize";
   const config = {
-    client_id: "d28c2aba126ecc97de6d",
+    client_id: process.env.GH_CLIENT,
     allow_signup: false,
     scope: "read:user user:email",
   };
@@ -78,8 +79,43 @@ export const finishGithubLogin = async (req, res) => {
     client_secret: process.env.GH_SECRET,
     code: req.query.code,
   };
+  // 이부분에 대한 공부가 더 필요한듯, 사용자의 해당 인증을 허가받고 코드를 받으면, 코드와 나의 클라이언트 코드와 시크릿 코드를 더해서
+  // access_token URL로 POST 방식으로 던져주면 해당 유저에대한 값을 리턴받는 형식. 그럼 어떤 데이터를 받을 수 있는지 어떻게 알 수 있지
+  // 앞에 권한페이지 설정부분에서 scope로 지정해 주는것인가?
   const params = new URLSearchParams(config).toString();
   const finalUrl = `${baseUrl}?${params}`;
+  //ES6 문법이 아닌 다른 방식의 접근 방법 then 사용
+
+  // fetch(finalUrl, {
+  //   method: "POST",
+  //   headers: {
+  //     Accept: "application/json",
+  //   },
+  // })
+  //   .then((response) => response.json())
+  //   .then((json) => {
+  //     if ("access_token" in tokenRequest) {
+  //       const { access_token } = tokenRequest;
+  //       const apiUrl = "https://api.github.com";
+  //       const userData = fetch(
+  //         fetch(`${apiUrl}/user`, {
+  //           headers: {
+  //             Authorization: `token ${access_token}`,
+  //           },
+  //         })
+  //           .then((response) => response.json())
+  //           .then((json) => {
+  //             fetch(`${apiUrl}/uesr/emails`, {
+  //               headers: {
+  //                 Authorization: `token ${access_token}`,
+  //               },
+  //             });
+  //           })
+  //       );
+  //     }
+  //   });
+
+  // 해당 토큰리퀘스트를 fetch사용해서 전달해주었을때 , 값을 json 형식으로 변환하는 이유?
   const tokenRequest = await (
     await fetch(finalUrl, {
       method: "POST",
@@ -90,20 +126,87 @@ export const finishGithubLogin = async (req, res) => {
   ).json();
   if ("access_token" in tokenRequest) {
     const { access_token } = tokenRequest;
-    const userRequest = await (
-      await fetch("https://api.github.com/user", {
+    const apiUrl = "https://api.github.com";
+    // 내가준 코드,클라이언트id,클라이언트secret이 모두 일치하면 리턴값중에 access_token이 포함되어져 있을 것이고, 그때 밑의 패치를 왜 실행시키지?
+    // >> Access_token을 가지고 유저의 정보를 받아오는 작업
+    const userData = await (
+      await fetch(`${apiUrl}/user`, {
         headers: {
           Authorization: `token ${access_token}`,
         },
       })
     ).json();
-    console.log(userRequest);
+    console.log(userData);
+    const emailData = await (
+      await fetch(`${apiUrl}/user/emails`, {
+        headers: {
+          Authorization: `token ${access_token}`,
+        },
+      })
+    ).json();
+    const emailObj = emailData.find(
+      (email) => email.primary === true && email.verified === true
+    );
+    if (!emailObj) {
+      return res.redirect("/login");
+    }
+    let user = await User.findOne({ email: emailObj.email });
+    if (!user) {
+      user = await User.create({
+        avatarUrl: userData.avatar_url,
+        name: userData.name,
+        username: userData.login,
+        email: emailObj.email,
+        password: "",
+        socialOnly: true,
+        location: userData.location,
+      });
+    }
+    req.session.loggedIn = true;
+    req.session.user = user;
+    return res.redirect("/");
   } else {
     return res.redirect("/login");
   }
 };
+export const getEdit = (req, res) => {
+  return res.render("edit-profile", { pageTitle: "Edit Profile" });
+};
+export const postEdit = async (req, res) => {
+  const {
+    session: {
+      user: { _id },
+    },
+    body: { name, username, email, location },
+  } = req;
+  // 위의 아이디 정의는 아래와 똑같다
+  // const id = req.session.user.id
+  // const { name, username, email, location } = req.body;
 
-export const edit = (req, res) => res.send("Edit User");
-export const remove = (req, res) => res.send("Remove User");
-export const logout = (req, res) => res.send("Log out");
+  // updata 항목만들어서 관리하기
+  const updateUser = await User.findByIdAndUpdate(
+    _id,
+    {
+      name,
+      username,
+      email,
+      location,
+    },
+    { new: true }
+  );
+  req.session.user = updateUser;
+  // 구조분해 할당으로 해방 객체 update 해주기. ...스프레드 사용
+  // req.session.user = {
+  //   ...req.session.user,
+  //   name,
+  //   username,
+  //   email,
+  //   location,
+  // };
+  return res.redirect("/users/edit");
+};
+export const logout = (req, res) => {
+  req.session.destroy();
+  return res.redirect("/");
+};
 export const see = (req, res) => res.send("See User");
