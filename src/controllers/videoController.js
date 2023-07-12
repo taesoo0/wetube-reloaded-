@@ -1,4 +1,5 @@
 import Video from "../models/Video";
+import User from "../models/User";
 
 // callback 으로 구현한 database Read
 // Video.find({}, (error, videos) => {
@@ -14,7 +15,7 @@ export const home = async (req, res) => {
 };
 export const watch = async (req, res) => {
   const { id } = req.params;
-  const video = await Video.findById(id);
+  const video = await Video.findById(id).populate("owner");
   if (video) {
     return res.render("watch", { pageTitle: video.title, video });
   }
@@ -49,15 +50,22 @@ export const getUpload = (req, res) => {
 };
 
 export const postUpload = async (req, res) => {
+  const {
+    user: { _id },
+  } = req.session;
+  const { path: fileUrl } = req.file;
   const { title, description, hashtags } = req.body;
   try {
     await Video.create({
       title,
       description,
+      fileUrl,
+      owner: _id,
       hashtags: Video.formatHashtags(hashtags),
     });
     return res.redirect("/");
   } catch (error) {
+    console.log(error);
     return res.render("upload", {
       pageTitle: "Upload Video",
       errorMessage: error._message,
