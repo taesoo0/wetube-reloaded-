@@ -30,3 +30,5 @@ html(lang="ko")
         main
             block content            
     include partials/footer 
+    //- 밑에는 브라우저를 위한 코드다. 코드에서 불러오는게 아니다. 브라우저에서 해당 폴더를 부르는 Url을 static으로 정의했기 때문에 아래에 static사용
+    script(src="/static/js/main.js")

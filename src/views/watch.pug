@@ -1,7 +1,7 @@
 extends base.pug
 
 block content
-    video(src="/"+video.fileUrl, controls, width=1000)
+    video(src="/"+video.fileUrl, controls, width=1000, controlsList="nodownload")
     div 
         p=video.description
         small=video.createdAt
