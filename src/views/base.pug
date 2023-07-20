@@ -1,3 +1,5 @@
+include mixins/message
+
 doctype html
 html(lang="ko")
     head
@@ -5,8 +7,16 @@ html(lang="ko")
         //- link(rel="stylesheet" href="https://unpkg.com/mvp.css")
         link(rel="styleshhet" href="/static/css/styles.css")
     body
+        if messages.error
+            +message("error", messages.error)
+        if messages.info
+            +message("info", messages.info)
+        if messages.success
+            +message("sucess", messages.success)
         header
             h1=pageTitle
+            if messages.error   
+                span=messages.error
             nav 
                 ul  
                     li 

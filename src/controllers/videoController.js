@@ -1,4 +1,5 @@
 import Video from "../models/Video";
+import Comment from "../models/Comment";
 import User from "../models/User";
 
 // callback 으로 구현한 database Read
@@ -16,7 +17,7 @@ export const home = async (req, res) => {
 export const watch = async (req, res) => {
   const { id } = req.params;
 
-  const video = await Video.findById(id).populate("owner");
+  const video = await Video.findById(id).populate("owner").populate("comments");
   if (!video) {
     return res.status(404).render("404", { pageTitle: "Vdieo not found." });
   }
@@ -32,6 +33,7 @@ export const getEdit = async (req, res) => {
     return res.status(404).render("404", { pageTitle: "Vdieo not found." });
   }
   if (String(video.owner) !== _id) {
+    req.flash("info", "Not authorized");
     return res.status(403).redirect("/");
   }
   return res.render("edit", { pageTitle: `Edit ${video.title}`, video });
@@ -116,7 +118,6 @@ export const search = async (req, res) => {
 };
 
 export const resgisterView = async (req, res) => {
-  console.log("HERE");
   const { id } = req.params;
   const video = await Video.findById(id);
   if (!video) {
@@ -125,4 +126,25 @@ export const resgisterView = async (req, res) => {
   video.meta.views = video.meta.views + 1;
   await video.save();
   return res.sendStatus(200);
+};
+
+export const createComment = async (req, res) => {
+  const {
+    session: { user },
+    body: { text },
+    params: { id },
+  } = req;
+
+  const video = await Video.findById(id);
+  if (!video) {
+    return res.sendStatus(404);
+  }
+  const comment = await Comment.create({
+    text,
+    owner: user._id,
+    video: id,
+  });
+  video.comments.push(comment._id);
+  video.save();
+  return res.sendStatus(201);
 };

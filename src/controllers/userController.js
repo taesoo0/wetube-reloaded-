@@ -214,7 +214,13 @@ export const logout = (req, res) => {
 };
 
 export const getChangePassword = (req, res) => {
-  return res.render("users/change-password", { pageTitle: "Change Password" });
+  if (req.session.user.socialOnly === true) {
+    req.flash("erro", "Can't Chagne Password");
+    return res.redirect("/");
+  }
+  return res.render("users/change-password", {
+    pageTitle: "Change Password",
+  });
 };
 
 export const postCHangePassword = async (req, res) => {
@@ -239,6 +245,7 @@ export const postCHangePassword = async (req, res) => {
   }
   const user = await User.findById(_id);
   user.password = newPassword;
+  req.flash("info", "Passwrod updated");
   await user.save();
   req.session.user.password = user.password;
   return res.redirect("/users/logout");

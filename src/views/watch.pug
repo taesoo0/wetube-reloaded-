@@ -15,7 +15,16 @@ block content
             input(type="range",step="1",value="0",min="0")#timeline
             div 
                 button#fullScreen Enter Full Screen
-        
+            br
+    if loggedIn
+        div.video_comments
+            form.video_comment-form#commentForm
+                textarea(cols="30", rows="10", placeholder="Write a nice Comment...")
+                button Add Comment
+    div.video_comments 
+        ul 
+            each comment in video.comments.reverse()
+                li.video__comment=comment.text
     //- div 
     //-     p=video.description
     //-     small=video.createdAt
@@ -29,6 +38,7 @@ block content
     
 block scripts 
     script(src="/static/js/videoPlayer.js")
+    script(src="/static/js/commentSection.js")
     
     
 //- (absolute , relative url? 차이점은 /가 붙으면 localhost /로 가게된다.)
